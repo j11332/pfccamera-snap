@@ -1,0 +1,225 @@
+name: pfccamera
+base: core18
+version: '0.1'
+summary: NDI Send/Receive
+description: |
+  PFC
+
+confinement: 'strict'
+grade: devel
+
+architectures:
+  - amd64
+
+apps:
+  NDI-Video-Receiver:
+    command: bin/NDI-Video-Receiver
+
+  NDI-Video-Sender:
+    command: bin/NDI-Video-Sender
+
+parts:
+  add-repo:
+    plugin: nil
+    source-type: local
+    override-pull: |
+      snapcraftctl pull
+      sed -i s/archive.ubuntu.com/jp.archive.ubuntu.com/ /etc/apt/sources.list
+    
+    override-build: |
+      wget -O- --secure-protocol=TLSv1_2 --no-check-certificate https://openrtm.org/pub/openrtm.key | apt-key add -
+      apt-key adv --keyserver keys.gnupg.net --recv-key C8B3A55A6F3EFCDE
+      apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key C8B3A55A6F3EFCDE
+      apt update
+      apt -yy upgrade
+      echo "deb http://openrtm.org/pub/Linux/ubuntu bionic main" >  /etc/apt/sources.list.d/openrtm.list
+      echo "deb http://realsense-hw-public.s3.amazonaws.com/Debian/apt-repo bionic main" > /etc/apt/sources.list.d/realsense.list
+      echo "deb http://security.ubuntu.com/ubuntu bionic-security main" > /etc/apt/sources.list.d/security.list
+      apt update
+
+    build-packages:
+      - wget
+      - gnupg
+  ndi-sdk-pc:
+    plugin: nil
+    source: ./ndi-sdk-pc
+    source-type: local
+    after: ['add-repo']
+    override-build: |
+      rm -rf $SNAPCRAFT_PART_INSTALL/lib/pkgconfig
+      mkdir -p $SNAPCRAFT_PART_INSTALL/lib/pkgconfig
+      cp libndi.pc $SNAPCRAFT_PART_INSTALL/lib/pkgconfig/
+    override-stage: |
+      snapcraftctl stage
+      sed -i $SNAPCRAFT_STAGE/lib/pkgconfig/libndi.pc -e "s:^prefix=.*$:prefix=$SNAPCRAFT_STAGE:"
+
+  ndi-sdk:
+    plugin: nil
+    source: https://b0e4fe3766b8739d74f9-437b8dd50f60b69cf0974b538e50585b.ssl.cf1.rackcdn.com/Utilities/SDK/NDI_SDK_Linux_v2/InstallNDISDK_v4_Linux.tar.gz
+    build-environment:
+      - PAGER: cat
+    after: ['ndi-sdk-pc']
+    override-build: |
+      chmod +x InstallNDISDK_v4_Linux.sh
+      yes | ./InstallNDISDK_v4_Linux.sh
+      rm -rf $SNAPCRAFT_PART_INSTALL/lib
+      cp -r NDI\ SDK\ for\ Linux/lib/$SNAPCRAFT_ARCH_TRIPLET $SNAPCRAFT_PART_INSTALL/lib
+      rm -rf $SNAPCRAFT_PART_INSTALL/include
+      mkdir $SNAPCRAFT_PART_INSTALL/include
+      cp NDI\ SDK\ for\ Linux/include/* $SNAPCRAFT_PART_INSTALL/include/
+    stage-packages:
+      - libavahi-client3
+      - libavahi-common3
+
+  opencv:
+    plugin: cmake
+    source: https://github.com/opencv/opencv.git
+    source-tag: 4.3.0
+    after: ['add-repo']
+    configflags:
+      - "-DCMAKE_BUILD_TYPE=RELEASE"
+      - "-DWITH_V4L=ON"
+      - "-DCMAKE_INSTALL_PREFIX=/"
+    build-packages:
+      - libjpeg8-dev 
+      - libtiff5-dev 
+      - libpng-dev 
+      - libgtk2.0-dev
+      - libavcodec-dev 
+      - libavformat-dev 
+      - libswscale-dev 
+      - libv4l-dev
+      - libatlas-base-dev
+      - gfortran
+    stage-packages:
+    - libatk1.0-0
+    - libavcodec57
+    - libavformat57
+    - libavutil55
+    - libbluray2
+    - libcairo2
+    - libchromaprint1
+    - libcroco3
+    - libcrystalhd3
+    - libdatrie1
+    - libdrm2
+    - libfontconfig1
+    - libfreetype6
+    - libgdk-pixbuf2.0-0
+    - libgme0
+    - libgomp1
+    - libgraphite2-3
+    - libgsm1
+    - libgtk2.0-0
+    - libharfbuzz0b
+    - libicu60
+    - libjbig0
+    - libjpeg-turbo8
+    - libmp3lame0
+    - libmpg123-0
+    - libnuma1
+    - libogg0
+    - libopenjp2-7
+    - libopenmpt0
+    - libopus0
+    - libpango-1.0-0
+    - libpangocairo-1.0-0
+    - libpangoft2-1.0-0
+    - libpixman-1-0
+    - libpng16-16
+    - librsvg2-2
+    - libshine3
+    - libsnappy1v5
+    - libsoxr0
+    - libspeex1
+    - libssh-gcrypt-4
+    - libswresample2
+    - libswscale4
+    - libthai0
+    - libtheora0
+    - libtiff5
+    - libtwolame0
+    - libva-drm2
+    - libva-x11-2
+    - libva2
+    - libvdpau1
+    - libvorbis0a
+    - libvorbisenc2
+    - libvorbisfile3
+    - libvpx5
+    - libwavpack1
+    - libwebp6
+    - libwebpmux3
+    - libx11-6
+    - libx264-152
+    - libx265-146
+    - libxau6
+    - libxcb-render0
+    - libxcb-shm0
+    - libxcb1
+    - libxcomposite1
+    - libxcursor1
+    - libxdamage1
+    - libxdmcp6
+    - libxext6
+    - libxfixes3
+    - libxi6
+    - libxinerama1
+    - libxml2
+    - libxrandr2
+    - libxrender1
+    - libxvidcore4
+    - libzvbi0
+
+  pfc-camera:
+    plugin: cmake
+    source: https://github.com/KentaTohashi/NDI-Video-Sender_Receiver.git
+    source-subdir: NDI-Video-Sender
+    build-environment:
+      - CMAKE_PREFIX_PATH: $SNAPCRAFT_STAGE:$SNAPCRAFT_STAGE/usr
+      - PKG_CONFIG_PATH: $SNAPCRAFT_STAGE/lib/pkgconfig:$SNAPCRAFT_STAGE/usr/lib/pkgconfig
+    after: ['opencv']
+    override-build: |
+      cmake $SNAPCRAFT_PART_SRC/NDI-Video-Sender -DCMAKE_INSTALL_PREFIX=$CSNAPCRAFT_PART_INSTALL
+      cmake --build . -- -j$SNAPCRAFT_PARALLEL_BUILD_COUNT
+      rm -rf $SNAPCRAFT_PART_INSTALL/bin
+      mkdir $SNAPCRAFT_PART_INSTALL/bin
+      ls -al
+      cp NDI-Video-Sender $SNAPCRAFT_PART_INSTALL/bin/
+    override-stage: |
+      cp $SNAPCRAFT_PART_INSTALL/bin/NDI-Video-Sender $SNAPCRAFT_STAGE/bin/NDI-Video-Sender
+    build-packages:
+      - librealsense2-dev
+      - libboost-all-dev
+      - libzbar-dev
+    stage-packages:
+      - librealsense2-dev
+      - libboost-all-dev
+      - libzbar-dev
+
+  pfc-recv:
+    plugin: cmake
+    source: https://github.com/KentaTohashi/NDI-Video-Sender_Receiver.git
+    source-subdir: NDI-Video-Receiver
+    build-environment:
+      - CMAKE_PREFIX_PATH: $SNAPCRAFT_STAGE:$SNAPCRAFT_STAGE/usr
+      - PKG_CONFIG_PATH: $SNAPCRAFT_STAGE/lib/pkgconfig:$SNAPCRAFT_STAGE/usr/lib/pkgconfig
+    after: ['opencv']
+    override-build: |
+      cmake $SNAPCRAFT_PART_SRC/NDI-Video-Receiver -DCMAKE_INSTALL_PREFIX=$CSNAPCRAFT_PART_INSTALL
+      cmake --build . -- -j$SNAPCRAFT_PARALLEL_BUILD_COUNT
+      rm -rf $SNAPCRAFT_PART_INSTALL/bin
+      mkdir $SNAPCRAFT_PART_INSTALL/bin
+      ls -al
+      cp NDI-Video-Receiver $SNAPCRAFT_PART_INSTALL/bin/
+    override-stage: |
+      cp $SNAPCRAFT_PART_INSTALL/bin/NDI-Video-Receiver $SNAPCRAFT_STAGE/bin/NDI-Video-Receiver
+    build-packages:
+      - librealsense2-dev
+      - libboost-all-dev
+      - libzbar-dev
+
+    stage-packages:
+      - librealsense2-dev
+      - libboost-all-dev
+      - libzbar-dev

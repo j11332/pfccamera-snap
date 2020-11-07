@@ -1,0 +1,10 @@
+prefix=/lib
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+include_dir=${prefix}/include
+
+Name: libNDI
+Description:Multimedia transmit library
+Version: 4.1.0
+Libs: -L${exec_prefix}/lib -lndi
+Cflags: -I${include_dir}
