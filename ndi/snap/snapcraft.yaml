@@ -68,6 +68,10 @@ parts:
       rm -rf $SNAPCRAFT_PART_INSTALL/include
       mkdir $SNAPCRAFT_PART_INSTALL/include
       cp NDI\ SDK\ for\ Linux/include/* $SNAPCRAFT_PART_INSTALL/include/
+    
+    override-stage: |
+      cp -rT lib $SNAPCRAFT_STAGE/lib
+      cp -rT include $SNAPCRAFT_STAGE/include
     stage-packages:
       - libavahi-client3
       - libavahi-common3
@@ -180,6 +184,8 @@ parts:
       - CMAKE_PREFIX_PATH: $SNAPCRAFT_STAGE:$SNAPCRAFT_STAGE/usr
       - PKG_CONFIG_PATH: $SNAPCRAFT_STAGE/lib/pkgconfig:$SNAPCRAFT_STAGE/usr/lib/pkgconfig
     after: ['opencv']
+    filesets:
+      binary-only: [ -*, bin/* ]
     override-build: |
       cmake $SNAPCRAFT_PART_SRC/NDI-Video-Sender -DCMAKE_INSTALL_PREFIX=$CSNAPCRAFT_PART_INSTALL
       cmake --build . -- -j$SNAPCRAFT_PARALLEL_BUILD_COUNT
@@ -192,11 +198,12 @@ parts:
     build-packages:
       - libboost-all-dev
       - libzbar-dev
+    stage:
+      - $binary-only
     stage-packages:
       - librealsense2-dev
       - libboost-all-dev
       - libzbar-dev
-
   pfc-recv:
     plugin: cmake
     source: https://github.com/KentaTohashi/NDI-Video-Sender_Receiver.git
@@ -214,11 +221,7 @@ parts:
       cp NDI-Video-Receiver $SNAPCRAFT_PART_INSTALL/bin/
     override-stage: |
       cp $SNAPCRAFT_PART_INSTALL/bin/NDI-Video-Receiver $SNAPCRAFT_STAGE/bin/NDI-Video-Receiver
-    build-packages:
-      - libboost-all-dev
-      - libzbar-dev
 
-    stage-packages:
-      - librealsense2-dev
+    build-packages:
       - libboost-all-dev
       - libzbar-dev
