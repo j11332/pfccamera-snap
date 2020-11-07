@@ -36,6 +36,7 @@ parts:
       echo "deb http://realsense-hw-public.s3.amazonaws.com/Debian/apt-repo bionic main" > /etc/apt/sources.list.d/realsense.list
       echo "deb http://security.ubuntu.com/ubuntu bionic-security main" > /etc/apt/sources.list.d/security.list
       apt update
+      apt install -y librealsense2-dev
 
     build-packages:
       - wget
@@ -189,7 +190,6 @@ parts:
     override-stage: |
       cp $SNAPCRAFT_PART_INSTALL/bin/NDI-Video-Sender $SNAPCRAFT_STAGE/bin/NDI-Video-Sender
     build-packages:
-      - librealsense2-dev
       - libboost-all-dev
       - libzbar-dev
     stage-packages:
@@ -215,7 +215,6 @@ parts:
     override-stage: |
       cp $SNAPCRAFT_PART_INSTALL/bin/NDI-Video-Receiver $SNAPCRAFT_STAGE/bin/NDI-Video-Receiver
     build-packages:
-      - librealsense2-dev
       - libboost-all-dev
       - libzbar-dev
 
